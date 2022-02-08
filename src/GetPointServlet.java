@@ -67,6 +67,7 @@ public class GetPointServlet extends HttpServlet {
 
 				st2.executeUpdate();
 
+				
 			}
 
 			rs.close();
