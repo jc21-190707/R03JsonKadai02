@@ -1,5 +1,6 @@
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -34,57 +35,53 @@ public class GetPointServlet extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-
-		response.setCharacterEncoding("utf-8");
-		String driverClasName = "com.mysql.jdbc.Driver";
-		String url = "jdbc:mysql://192.168.54.190:3306/jsonkadai02";
-		String user = "jsonkadai02";
-		String password = "JsonKadai02";
-
-		int point = 0;
+		response.setContentType("text/html; charset = utf-8");
+		request.setCharacterEncoding("utf-8");
+		
+		PrintWriter out = response.getWriter();
+		final String driverClasName = "com.mysql.jdbc.Driver";
+		final String url = "jdbc:mysql://192.168.54.190:3306/jsonkadai02";
+		final String user = "jsonkadai02";
+		final String password = "JsonKadai02";
 
 		try {
 			Class.forName(driverClasName);
 			Connection con = DriverManager.getConnection(url, user, password);
-			PreparedStatement st = con
-					.prepareStatement("Select point from point_mst where shop_id = ? and user_id = ?");
-
-			PreparedStatement st2 = con.prepareStatement("insert into point_mst values(?,?,500)");
-
-			String shop_id = request.getParameter("shop_id");
-			String user_id = request.getParameter("user_id");
-
-			st.setString(1, shop_id);
-			st.setString(2, user_id);
+			String point = null;
+			
+			String tenpoid = request.getParameter("TENPO_ID");
+			String userid = request.getParameter("USER_ID");
+			
+			PreparedStatement at = con.prepareStatement("insert ignore into point_list(tenpo_id, user_id, point) values (?, ?, 500)");
+			at.setString(1, tenpoid);
+			at.setString(2, userid);
+			at.executeUpdate();
+			
+			PreparedStatement pt = con.prepareStatement("insert ignore into tenpo_list(tenpo_id, tenpo_name) values (?, null)");
+			pt.setString(1, tenpoid);
+			pt.executeUpdate();
+			
+			
+			PreparedStatement st = con.prepareStatement("Select * from point_list where tenpo_id = ? and user_id = ?");
+			st.setString(1, tenpoid);
+			st.setString(2, userid);
 			ResultSet rs = st.executeQuery();
-
-			if (rs.next() == true) {
-				point = rs.getInt("point");
-
-			} else {
-				st2.setString(1, "shop_id");
-				st2.setString(2, "user_id");
-
-				st2.executeUpdate();
-
-				
+			
+			if(rs.next()) {
+				point = rs.getString("point");
 			}
-
-			rs.close();
+			
 			st.close();
 			con.close();
+			
+			request.setAttribute("POINT", point);
 
-		} catch (SQLException e) {
-			// TODO: handle exception
-			e.printStackTrace();
-
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
+			RequestDispatcher rd = request.getRequestDispatcher("/WEB-INF/jsp/getPoint.jsp");
+			rd.forward(request, response);
+		} catch (Exception e) {
+			out.println("<pre>");
+			e.printStackTrace(out);
 		}
-
-		request.setAttribute("point", point);
-		RequestDispatcher rd = request.getRequestDispatcher("/WEB-INF/jsp/getPoint.jsp");
-		rd.forward(request, response);
 
 	}
 
