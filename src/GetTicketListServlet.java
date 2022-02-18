@@ -1,5 +1,6 @@
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -7,6 +8,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.mysql.cj.xdevapi.PreparableStatement;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -39,6 +42,10 @@ public class GetTicketListServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		
+		response.setCharacterEncoding("utf-8");
+		request.setCharacterEncoding("utf-8");
+		
+		PrintWriter out = response.getWriter();
 		final String driverName = "com.mysql.jdbc.Driver";
 		final String url = "jdbc:mysql://192.168.54.190:3306/jsonkadai02";
 		final String id = "jsonkadai02";
@@ -47,23 +54,35 @@ public class GetTicketListServlet extends HttpServlet {
 		try {
 			Class.forName(driverName);
 			Connection con = DriverManager.getConnection(url, id, password);
+			String point=null;
+			String ticketid = null;
+			String ticketname = null;
+			String ticketpoint = null;
 			
-			PreparedStatement st = con.prepareStatement("select * from point_list");
-			String ten = request.getParameter("TENPO_ID");
-			String use = request.getParameter("USER_ID");
+			String tenpoid = request.getParameter("TENPO_ID");
+			String userid = request.getParameter("USER_ID");
 			
-			st.setString(1, ten);
-			st.setString(2, ten);
-			st.setString(3, use);
+			PreparedStatement st = con.prepareStatement("select * from point_list where TENPO_ID = ? and USER_ID = ?");
+			st.setString(1, tenpoid);
+			st.setString(2, userid);
+			ResultSet rs = st.executeQuery();
+			if(rs.next()) {
+				point = rs.getString("point");
+			}
 			
-			ResultSet result = st.executeQuery();
+			int point2 = Integer.parseInt(point);
+			PreparedStatement at = con.prepareStatement("select * from ticket_list where POINT <= ? && TENPO_ID = ?");
+			at.setInt(1, point2);
+			at.setString(2, tenpoid);
+			ResultSet result = at.executeQuery();
 			
 			List<String[]> list = new ArrayList<>();
-			while (result.next() == true) {
+			
+			while(result.next() == true) {
 				String[] s = new String[3];
-				s[0] = result.getString("ticket_id");
-				s[1] = result.getString("ticket_name");
-				s[2] = result.getString("point");
+				s[0] = result.getString("TICKET_ID");
+				s[1] = result.getString("TICKET_NAME");
+				s[2] = result.getString("POINT");
 				list.add(s);
 			}
 			
@@ -71,13 +90,10 @@ public class GetTicketListServlet extends HttpServlet {
 			RequestDispatcher rd = request.getRequestDispatcher("/WEB-INF/jsp/getTicketList.jsp");
 			rd.forward(request, response);
 			
-			} catch (ClassNotFoundException e ) {
+			} catch (Exception e ) {
+				out.println("<pre>");
 				e.printStackTrace();
-				
-		} catch (SQLException e) {
-			e.printStackTrace();
-			
-		}
+			}
 
 	}
 

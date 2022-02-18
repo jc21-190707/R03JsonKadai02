@@ -16,6 +16,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.mysql.cj.xdevapi.PreparableStatement;
+
 /**
  * Servlet implementation class GetPointServlet
  */
@@ -37,10 +39,10 @@ public class GetPointServlet extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		//response.setContentType("text/html; charset = utf-8");
-		//request.setCharacterEncoding("utf-8");
+		response.setContentType("text/html; charset = utf-8");
+		request.setCharacterEncoding("utf-8");
 		
-		//PrintWriter out = response.getWriter();
+		PrintWriter out = response.getWriter();
 		final String driverName = "com.mysql.jdbc.Driver";
 		final String url = "jdbc:mysql://192.168.54.190:3306/jsonkadai02";
 		final String id = "jsonkadai02";
@@ -49,53 +51,41 @@ public class GetPointServlet extends HttpServlet {
 		try {
 			Class.forName(driverName);
 			Connection con = DriverManager.getConnection(url, id, password);
-			PreparedStatement st = con.prepareStatement("select point from POINT where TENPO_ID=? and USER_ID=?");
-			//String point = null;
+			//PreparedStatement st = con.prepareStatement("select point from POINT where TENPO_ID=? and USER_ID=?");
+			String point = null;
 			
 			String tenpoid = request.getParameter("TENPO_ID");
 			String userid = request.getParameter("USER_ID");
+			//st.setString(1, tenpoid);
+			//st.setString(2, userid);
+			//ResultSet result = st.executeQuery();
+			
+			PreparedStatement at = con.prepareStatement("insert ignore into point_list(tenpo_id, user_id, point) values (?, ?, 500)");
+			at.setString(1, tenpoid);
+			at.setString(2, userid);
+			at.executeUpdate();
+			
+			PreparedStatement st = con.prepareStatement("select * from point_list where TENPO_ID = ? and USER_ID = ?");
 			st.setString(1, tenpoid);
 			st.setString(2, userid);
-			ResultSet result = st.executeQuery();
+			ResultSet rs = st.executeQuery();
 			
-			List<String[]> list = new ArrayList<>();
-			
-			if (result.next() == true) {
-				String[] s = new String[1];
-				s[0] = result.getString("point");
-				list.add(s);
-			} else {
-				PreparedStatement at = con.prepareStatement("insert ignore into point_list(tenpo_id, user_id, point) values (?, ?, 500)");
-				at.setString(1, tenpoid);
-				at.setString(2, userid);
-				
-				int z = at.executeUpdate();
-				
-				if (z == 1) {
-					System.out.println("新規追加成功");
-					st.setString(1, tenpoid);
-					st.setString(2, userid);
-					result = st.executeQuery();
-					if (result.next() == true) {
-						String[] s = new String[1];
-						s[0] = result.getString("point");
-						list.add(s);
-					}
-					
-				} else {
-					System.out.println("新規追加失敗");
-				}
+			if(rs.next()) {
+				point = rs.getString("point");
 			}
 			
-			request.setAttribute("list", list);
+			st.close();
+			con.close();
+			
+			request.setAttribute("POINT", point);
+			
 			RequestDispatcher rd = request.getRequestDispatcher("/WEB-INF/jsp/getPoint.jsp");
 			rd.forward(request, response);
 			
-		} catch (ClassNotFoundException e) {
+		} catch (Exception e) {
+			out.println("<pre>");
 			e.printStackTrace();
 			
-		} catch (SQLException e) {
-			e.printStackTrace();
 		}
 
 	}
